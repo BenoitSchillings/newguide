@@ -46,7 +46,7 @@ CFLAGS += -lrt
 endif
 
 
-all: guide174ao talk_server
+all: guide174ao talk_server img
 	
 guide174ao: talk.cpp guide174ao.cpp util.cpp ./tinyobj/tinystr.cpp.o ./tinyobj/tinyxmlparser.cpp.o ./tinyobj/tinyxml.cpp.o ./tinyobj/tinyxmlerror.cpp.o
 	$(CC) -march=native -O3 guide174ao.cpp  ao.cpp util.cpp ~/skyx_tcp/skyx.cpp ~/skyx_tcp/sky_ip.cpp $(TINY) -o guide174ao $(CFLAGS)  $(OPENCV) -lASICamera
@@ -54,6 +54,8 @@ guide174ao: talk.cpp guide174ao.cpp util.cpp ./tinyobj/tinystr.cpp.o ./tinyobj/t
 talk_server:  talk_server.cpp util.cpp ./tinyobj/tinystr.cpp.o ./tinyobj/tinyxmlparser.cpp.o ./tinyobj/tinyxml.cpp.o ./tinyobj/tinyxmlerror.cpp.o
 	$(CC) -march=native -O3 -lzmq talk_server.cpp util.cpp $(TINY) -lzmq -o talk_server $(CFLAGS)
 
+img:img.cpp fits_header.h
+	g++  -o img -I/usr/local/include/opencv  img.cpp ./lib/libqsiapi.so -lftdi  -lopencv_calib3d -lopencv_core -lopencv_features2d -lopencv_flann -lopencv_highgui -lopencv_imgproc -lopencv_ml -lopencv_objdetect -lopencv_photo -lopencv_stitching -lopencv_superres  -lopencv_video -lopencv_videostab -lzmq
 
 ./tinyobj/tinystr.cpp.o: ./tiny/tinystr.cpp
 	$(CC)  -c ./tiny/tinystr.cpp -o ./tinyobj/tinystr.cpp.o $(CFLAGS)

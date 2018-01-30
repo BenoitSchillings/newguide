@@ -59,8 +59,7 @@ int TalkServer::HandleSetCommands(const char * s)
     int  v;
 
     int cnt = sscanf(s, "+%s %d", tmp, &v);
-    printf("%d\n", strlen(tmp));
-    if (strlen(tmp)>0) {
+     if (strlen(tmp)>0) {
 	values[std::string(tmp)] = v;
     }
 

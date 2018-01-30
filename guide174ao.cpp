@@ -782,12 +782,12 @@ int main(int argc, char **argv)
     signal(SIGINT, intHandler);
 
     talk = new Talk();
-    
-    talk->Set("guide", 1);
-    talk->Set("ao", 10);
-    talk->Set("ao", 2);
 
-    printf("read back %d %d\n", talk->Get("guide"), talk->Get("ao"));
+    //for (int i = 0; i < 100000; i++) { 	   
+    //int v = talk->Get("guide");
+    //}
+
+    talk->Set("guide", 1);
 
     tt = new tiptilt();
  
