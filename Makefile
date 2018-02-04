@@ -46,10 +46,13 @@ CFLAGS += -lrt
 endif
 
 
-all: guide174ao talk_server img
+all: guide174ao talk_server img tt
 	
 guide174ao: talk.cpp guide174ao.cpp util.cpp ./tinyobj/tinystr.cpp.o ./tinyobj/tinyxmlparser.cpp.o ./tinyobj/tinyxml.cpp.o ./tinyobj/tinyxmlerror.cpp.o
 	$(CC) -march=native -O3 guide174ao.cpp  ao.cpp util.cpp ~/skyx_tcp/skyx.cpp ~/skyx_tcp/sky_ip.cpp $(TINY) -o guide174ao $(CFLAGS)  $(OPENCV) -lASICamera
+
+tt: talk.cpp tt.cpp util.cpp ./tinyobj/tinystr.cpp.o ./tinyobj/tinyxmlparser.cpp.o ./tinyobj/tinyxml.cpp.o ./tinyobj/tinyxmlerror.cpp.o
+	$(CC) -march=native -O3 tt.cpp  ao.cpp util.cpp ~/skyx_tcp/skyx.cpp ~/skyx_tcp/sky_ip.cpp $(TINY) -o tt $(CFLAGS)  $(OPENCV) -lASICamera
 
 talk_server:  talk_server.cpp util.cpp ./tinyobj/tinystr.cpp.o ./tinyobj/tinyxmlparser.cpp.o ./tinyobj/tinyxml.cpp.o ./tinyobj/tinyxmlerror.cpp.o
 	$(CC) -march=native -O3 -lzmq talk_server.cpp util.cpp $(TINY) -lzmq -o talk_server $(CFLAGS)
@@ -70,7 +73,7 @@ img:img.cpp fits_header.h
 	$(CC)  -c ./tiny/tinyxmlerror.cpp -o ./tinyobj/tinyxmlerror.cpp.o $(CFLAGS)
 
 clean:
-	rm -fguide174ao talk_server
+	rm -fguide174ao talk_server tt
 #pkg-config libusb-1.0 --cflags --libs
 #pkg-config opencv --cflags --libs
 
