@@ -25,6 +25,10 @@ int   g_count = 18;
 char g_fn[256]="out";
 volatile int  killp = 0;
 
+#include "talk.cpp"
+
+
+Talk	*talk;
 
 
 //-----------------------------------------------------------------------
@@ -1026,10 +1030,11 @@ int Cam::Take()
         cam.get_ImageReady(&imageReady);
     }
    
-
+    talk->Set("resetguide", 1);
     cam.get_ImageArraySize(x, y, z);
     cam.get_ImageArray(cv_image.ptr<unsigned short>(0));	
     Save(); 
+    usleep(5000*1000);
     } 
 exit:; 
     cam.put_Connected(false);
@@ -1171,6 +1176,9 @@ void intHandler(int dummy=0) {
 
 int main(int argc, char** argv)
 {
+    talk = new Talk();
+
+
     signal(SIGINT, intHandler);
 
     if (argc == 1 || strcmp(argv[1], "-h") == 0) {

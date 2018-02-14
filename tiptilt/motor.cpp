@@ -11,6 +11,8 @@
 
 using namespace std;
 
+Talk	*tt_talk = 0;
+
 //--------------------------------------------------------------------
 
 #define USB_VENDOR_ID         0x0104d
@@ -115,7 +117,7 @@ void move(int motor, int delta)
 {
     char    buf[256];
     
-    printf("%d %d\n", motor, delta);
+    //printf("%d %d\n", motor, delta);
     sprintf(buf, "%dPR%d", motor, delta);
     usb_write(buf);
 }
@@ -151,10 +153,11 @@ public:;
 
 	void	Move(float d_alpha, float d_beta);
 	void	MoveTo(float alpha, float beta);	
-	void	Reset();
+	void	reset_pos();
 
 	void	MoveFocus(float delta);
 	void	MoveToFocus(float value);	
+   	void    setxyz(float x, float y, float z);
 
 private:
 	int     InitUSB();
@@ -174,8 +177,7 @@ private:
 
 	void    upd_tilt();
     
-    void    setxyz(float x, float y, float z);
-   	 
+    	 
     float   c_x;
     float   c_y;
     float   c_z;
@@ -196,6 +198,38 @@ private:
 
 //--------------------------------------------------------------------
 
+void tiptilt::reset_pos()
+{
+	return;
+	printf("reset tt\n");
+	move(1, 15000);
+    	wait_complete(1);
+	move(1, -7000);
+    	wait_complete(1);
+
+	move(2, 15000);
+    	wait_complete(2);
+	move(2, -7000);
+    	wait_complete(2);
+
+	move(3, 15000);
+    	wait_complete(3);
+	move(3, -7000);
+    	wait_complete(3);
+
+	c_x = 0;
+	c_y = 0;
+	c_z = 0;
+
+    	tt_talk->Set("c_x", c_x);
+    	tt_talk->Set("c_y", c_y);
+    	tt_talk->Set("c_z", c_z);
+
+	MoveToFocus(tt_talk->Get("d_focus"));
+}
+
+//--------------------------------------------------------------------
+
 
    tiptilt::tiptilt()
 {
@@ -206,13 +240,19 @@ private:
     c_a = 0;
     c_b = 0;
     
+    tt_talk = new Talk();
+/*
+    c_x = tt_talk->Get("c_x");
+    c_y = tt_talk->Get("c_y");
+    c_z = tt_talk->Get("c_z");
+*/
     backward_step_x = 20.10;
-    backward_step_y = 19.94;
-    backward_step_z = 22.44;
+    backward_step_y = 19.94*1.11;
+    backward_step_z = 22.44/1.11;
 
     forward_step_x = 23.28;
-    forward_step_y = 23.32;
-    forward_step_z = 26.02;
+    forward_step_y = 23.32*1.11;
+    forward_step_z = 26.02/1.11;
 
 
     InitUSB();
@@ -322,7 +362,7 @@ float tiptilt::map_step_distance_z(int steps)
 
 void    tiptilt::setxyz(float x, float y, float z)
 {
-    
+    //printf("%f %f %f\n", x, y, z); 
     x *= 20.0;
     y *= 20.0;
     z *= 20.0;
@@ -354,6 +394,11 @@ void    tiptilt::setxyz(float x, float y, float z)
     c_x += map_step_distance_x(step_x);
     c_y += map_step_distance_y(step_y);
     c_z += map_step_distance_z(step_z);
+
+    tt_talk->Set("c_x", c_x);
+    tt_talk->Set("c_y", c_y);
+    tt_talk->Set("c_z", c_z);
+
 }
 
 //--------------------------------------------------------------------
@@ -362,6 +407,8 @@ void    tiptilt::upd_tilt()
 {
     float x,y,z;
     
+
+    tt_talk->Set("d_focus", d_focus);
     float tan30 = 0.57735026;
     
     x = (2.0 / 3.0) * c_a;

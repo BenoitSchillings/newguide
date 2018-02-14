@@ -10,9 +10,8 @@
 #include <iostream>
 #include "/home/benoit/skyx_tcp/skyx.h"
 
-
-#include "./tiptilt/motor.cpp"
 #include "talk.cpp"
+#include "./tiptilt/motor.cpp"
 
 
 bool sim = false;
@@ -23,8 +22,6 @@ Talk	*talk;
 
 void intHandler(int signum)
 {
-    talk->Set("guide", 0);
-    tt->MoveTo(0, 0);
     tt_sighandler(signum);
     closeCamera();
     printf("emergency close\n");
@@ -44,8 +41,14 @@ int main(int argc, char **argv)
     int i = 0;
 
     if (argc == 2) {
+
+	if (strcmp(argv[1], "reset") == 0) {
+		tt->reset_pos();
+		goto exit;
+	}
+
         float focus_move = atof(argv[1]);
-	if (fabs(focus_move > 500.0)) {
+	if (fabs(focus_move > 12500.0)) {
 		printf("max move %f\n", focus_move);
 	}
 	else {
@@ -57,7 +60,7 @@ int main(int argc, char **argv)
         float dx = atof(argv[1]);
 	float dy = atof(argv[2]);
 
-	if (fabs(dx > 500.0) || fabs(dy > 500)) {
+	if (fabs(dx > 12500.0) || fabs(dy > 12500)) {
 		printf("max tilt %f %f\n", dx, dy);
 	}
 	else {
@@ -65,6 +68,7 @@ int main(int argc, char **argv)
 	}
     }
 
+exit:;
 
     delete tt;
 

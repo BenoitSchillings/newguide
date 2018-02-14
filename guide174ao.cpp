@@ -10,15 +10,16 @@
 #include <iostream>
 #include "/home/benoit/skyx_tcp/skyx.h"
 
+#include "talk.cpp"
 
 #include "./tiptilt/motor.cpp"
-#include "talk.cpp"
 
 
 bool sim = false;
 
-tiptilt *tt;
 Talk	*talk;
+
+tiptilt *tt;
 
 //--------------------------------------------------------------------------------------
 
@@ -225,8 +226,8 @@ void Guider::MinDev()
 
 Guider::Guider()
 {
-    width = 1936/2;
-    height = 1200/2; 
+    width = 1600/2;
+    height = 1100/2; 
     frame = 0;
     background = 0;
     dev = 100;
@@ -242,10 +243,10 @@ Guider::Guider()
     if (!sim) InitCam(0, 0, width, height);
 
 
-    mount_dx1 = get_value("mount_dx1");
-    mount_dx2 = get_value("mount_dx2");
-    mount_dy1 = get_value("mount_dy1");
-    mount_dy2 = get_value("mount_dy2");
+    mount_dx1 = get_value("mount_dx1")/500.0;
+    mount_dx2 = get_value("mount_dx2")/500.0;
+    mount_dy1 = get_value("mount_dy1")/500.0;
+    mount_dy2 = get_value("mount_dy2")/500.0;
     gain_x = 1.0;
     gain_y = 1.0;
 }
@@ -255,6 +256,7 @@ Guider::Guider()
 
 void	Guider::Move(float dx, float dy)
 {
+    //while(fabs(dx) > 15 || fabs(dy) > 15) { dx/=2.0;dy/=2.0;};
     tt->Move(dx, dy);
 }
 
@@ -271,7 +273,8 @@ bool Guider::FindGuideStar()
 {
     MinDev();
     GaussianBlur(image, temp_image, Point(7, 7), 5);
-
+    
+    ref_x = -1;
     int	x, y;
     long	max = 0;
 
@@ -297,7 +300,7 @@ bool Guider::FindGuideStar()
         ref_y = -1;
         return false;
     }
-    //printf("max %ld, %d %d\n", max, ref_x, ref_y);
+    printf("max %ld, %d %d\n", max, ref_x, ref_y);
     return true;
 }
 
@@ -336,7 +339,7 @@ void Guider::InitCam(int cx, int cy, int width, int height)
     setValue(CONTROL_GAIN, 0, false);
     printf("max %d\n", getMax(CONTROL_BANDWIDTHOVERLOAD));
 
-    setValue(CONTROL_BANDWIDTHOVERLOAD, 44, false); //lowest transfer speed
+    setValue(CONTROL_BANDWIDTHOVERLOAD, 64, false); //lowest transfer speed
     setValue(CONTROL_EXPOSURE, 10, false);
     setValue(CONTROL_HIGHSPEED, 1, false);
     setValue(CONTROL_HARDWAREBIN, 1, false); 
@@ -506,7 +509,7 @@ int guide()
 {
     float   sum_x;
     float   sum_y;
-    int     frame_per_correction = 3;
+    int     frame_per_correction = 1;
     int     frame_count;
     int	drizzle_dx = 0;
     int	drizzle_dy = 0;
@@ -526,6 +529,7 @@ int guide()
     Mat zoom;
 
 
+
     frame_count = 0;
     sum_x = 0;
     sum_y = 0;
@@ -533,9 +537,13 @@ int guide()
     int logger = 0;
     int bad = 0;
 
+    int nn = 0;
+
+    float ftx = 0; float fty = 0;
+
     while(1) {
 restart:
-
+again:
 	bad = 0;
 
         g->GetFrame();
@@ -555,6 +563,7 @@ restart:
 
 
         if (g->HasGuideStar()) {
+	    nn++;
             float cx;
             float cy;
             float total_v;
@@ -572,8 +581,7 @@ restart:
 		goto restart;
 	    }
 
-            printf("centroid %f %f %f\n", cx, cy, total_v); 
-	    if (total_v > 0) {
+ 	    if (total_v > 0) {
                 float dx = cx-g->ref_x + drizzle_dx;
                 float dy = cy-g->ref_y + drizzle_dy;
                 sum_x += dx;
@@ -583,15 +591,15 @@ restart:
                 if (frame_count == frame_per_correction) {
                     sum_x = sum_x / frame_per_correction;
                     sum_y = sum_y / frame_per_correction;
-                    //printf("sum %f %f\n", sum_x, sum_y);
                     float tx = g->error_to_tx(sum_x, sum_y);
                     float ty = g->error_to_ty(sum_x, sum_y);
-                    printf("error %f %f\n", sum_x, sum_y); 
+                    //printf("error %f %f\n", sum_x, sum_y); 
 		    sum_x = 0;
                     sum_y = 0;
                     frame_count = 0;
-		    printf("move %f %f\n", -tx, -ty);
-		    g->Move(-tx, -ty);
+		    printf("%d %f %f/ %f %f\n", nn, -tx*0.2, -ty*0.2, ftx*0.2, fty*0.2);
+		    ftx += tx;fty += ty;
+		    g->Move(-tx * 0.2, -ty * 0.2);
                 }
             }
 
@@ -608,18 +616,104 @@ restart:
         DrawVal(uibm, "gain", g->gain, 1, "");
 
 
-	if (frame_count % 10 == 0) {
+	if (nn % 5 == 0) {
+		if (talk->Get("resetguide") == 1) {
+			//talk->Set("resetpt", 1);
+			tt->MoveTo(0, 0); 
+			usleep(2000*1000);
+			talk->Set("resetguide", 0);
+			g->ref_x = -1;
+			g->GetFrame();
+			g->GetFrame();
+			g->GetFrame();
+			printf("reset guide\n");
+			goto again;
+		}
+
         	cv::imshow("video", uibm);
 
         	char c = cvWaitKey(1);
         	if (c == 27) {
 
-            	stopCapture();
-            	closeCamera();
-            	return 0;
+            		stopCapture();
+            		closeCamera();
+            		return 0;
         	}
 	}
     }
+}
+
+//--------------------------------------------------------------------------------------
+
+float calc_d(float x1, float y1, float x2, float y2)
+{
+	float dx = (x2-x1);
+	float dy = (y2-y1);
+
+	return(sqrt(dx*dx+dy*dy));
+}
+
+//--------------------------------------------------------------------------------------
+
+int ao_calibrate(int m)
+{
+    Guider *g = new Guider();
+    float  x1, y1;
+    float  x2, y2;
+    float  x3, y3;
+
+    float  d1, d2;
+
+    ui_setup();
+    hack_gain_upd(g);
+    Mat uibm = Mat(Size(1200, 800), CV_16UC1);
+    startCapture();
+
+
+    for (int i = 0; i < 3; i++) g->GetFrame();
+    
+    g->FindGuideStar();
+
+    x1 = g->ref_x;
+    y1 = g->ref_y;
+
+    printf("v1 %f %f\n", x1, y1);
+
+
+	    tt->setxyz(0, 0, 4000);
+    
+    usleep(2000*1000);
+    for (int i = 0; i < 3; i++) g->GetFrame();
+    
+    g->FindGuideStar();
+
+    x2 = g->ref_x;
+    y2 = g->ref_y;
+
+    printf("v2 %f %f\n", x2, y2);
+
+
+    tt->setxyz(0, 0, 0);
+    usleep(2000*1000);
+ 
+    for (int i = 0; i < 3; i++) g->GetFrame();
+    
+    g->FindGuideStar();
+
+    x3 = g->ref_x;
+    y3 = g->ref_y;
+
+    printf("v3 %f %f\n", x3, y3);
+
+
+    d1 = calc_d(x1, y1, x2, y2);
+    d2 = calc_d(x2, y2, x3, y3);
+
+    printf("%d -- d-> [%f, %f]\n", m, d1, d2);
+    stopCapture();
+    closeCamera();
+
+    return 0;
 }
 
 //--------------------------------------------------------------------------------------
@@ -658,7 +752,7 @@ int calibrate()
  	printf("v1 %f %f\n", x1, y1);
 
 
-	g->Move(100, 0);
+	g->Move(500, 0);
 
 	cv::imshow("video", g->image);
         char c = cvWaitKey(1);
@@ -670,7 +764,7 @@ int calibrate()
         y2 = g->ref_y;
         printf("v2 %f %f\n", x2, y2);
 
-	g->Move(0, 100);
+	g->Move(0, 500);
 
 	cv::imshow("video", g->image);
         c = cvWaitKey(1);
@@ -684,7 +778,7 @@ int calibrate()
         cv::imshow("video", g->image);
         c = cvWaitKey(1);
 
-	g->Move(-100, -100);
+	g->Move(-500, -500);
       
         for (int i = 0; i < 8; i++) g->GetFrame(); 
         g->FindGuideStar();
@@ -705,10 +799,15 @@ int calibrate()
     g->mount_dx2 = (x3-x2);
     g->mount_dy2 = (y3-y2);
 
-    set_value("mount_dx1", g->mount_dx1/100.0);
-    set_value("mount_dx2", g->mount_dx2/100.0);
-    set_value("mount_dy1", g->mount_dy1/100.0);
-    set_value("mount_dy2", g->mount_dy2/100.0);
+    set_value("mount_dx1", g->mount_dx1);
+    set_value("mount_dx2", g->mount_dx2);
+    set_value("mount_dy1", g->mount_dy1);
+    set_value("mount_dy2", g->mount_dy2);
+
+    g->mount_dx1 = (x2-x1)/500.0;
+    g->mount_dy1 = (y2-y1)/500.0;
+    g->mount_dx2 = (x3-x2)/500.0;
+    g->mount_dy2 = (y3-y2)/500.0;
 
     return 0;
 }
@@ -784,7 +883,7 @@ int main(int argc, char **argv)
     talk = new Talk();
 
     //for (int i = 0; i < 100000; i++) { 	   
-    //int v = talk->Get("guide");
+    printf("not found %d\n", talk->Get("xx"));
     //}
 
     talk->Set("guide", 1);
@@ -830,6 +929,7 @@ int main(int argc, char **argv)
         if (match(argv[pos], "-guide")) { guide(); tt->MoveTo(0, 0); }
 
         if (match(argv[pos], "-cal")) {calibrate(); tt->MoveTo(0, 0); }
+        if (match(argv[pos], "-zcal")) {ao_calibrate(1);tt->MoveTo(0, 0); }
 
         pos++;
     }
