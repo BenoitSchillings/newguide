@@ -894,7 +894,7 @@ int main(int argc, char **argv)
 
     talk->Set("guide", 1);
 
-    //tt = new tiptilt();
+    tt = new tiptilt();
  
     int i = 0;
 

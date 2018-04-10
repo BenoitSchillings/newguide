@@ -36,6 +36,8 @@ int usb_write(const char *txt)
 {
     int n, ret;
     
+    if (handle == 0) return 0;
+
     n = sprintf((char*)transferBuf, "%s\r", txt);
     ret = libusb_bulk_transfer(handle, USB_ENDPOINT_OUT, transferBuf, n, &n, USB_TIMEOUT);
     
@@ -51,6 +53,8 @@ int usb_write(const char *txt)
 int usb_read(void)
 {
     int nread, ret;
+
+    if (handle == 0) return 0;
     
     ret = libusb_bulk_transfer(handle, USB_ENDPOINT_IN, receiveBuf, sizeof(receiveBuf), &nread, USB_TIMEOUT);
     if (ret) {
@@ -96,7 +100,8 @@ int init_usb_connection()
     
     if (!handle) {
         perror("device not found");
-        exit(-1);
+        return -1;
+        //exit(-1);
     }
     
     libusb_reset_device(handle);
@@ -256,7 +261,8 @@ void tiptilt::reset_pos()
 
 
     InitUSB();
-    
+    if (handle == 0) return;
+
     usb_write("1VA1500");
     usb_write("1AC22000");
     usb_write("2VA1500");
@@ -271,7 +277,9 @@ void tiptilt::reset_pos()
 
 	tiptilt::~tiptilt()
 {
-    CloseUSB();
+    	if (handle == 0) return;
+   
+	CloseUSB();
 }
 
 //--------------------------------------------------------------------
@@ -407,6 +415,7 @@ void    tiptilt::upd_tilt()
 {
     float x,y,z;
     
+    if (handle == 0) return;
 
     tt_talk->Set("d_focus", d_focus);
     float tan30 = 0.57735026;
