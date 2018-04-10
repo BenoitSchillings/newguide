@@ -577,8 +577,7 @@ again:
 
 
 	    if (bad == 10) {
-		printf("no guide star. restart\n");
-		goto restart;
+
 	    }
 
  	    if (total_v > 0) {
@@ -615,7 +614,14 @@ again:
         DrawVal(uibm, "exp ", g->exp, 0, "sec");
         DrawVal(uibm, "gain", g->gain, 1, "");
 
-
+	if (nn % 1 == 0) {
+		if (talk->Get("driz") == 1) {
+			talk->Set("driz", 0);	
+		
+			drizzle_dx = -2.0+(rand()%100)/25.0; 
+			drizzle_dy = -2.0+(rand()%100)/25.0;	
+		}
+	}
 	if (nn % 5 == 0) {
 		if (talk->Get("resetguide") == 1) {
 			//talk->Set("resetpt", 1);
@@ -888,7 +894,7 @@ int main(int argc, char **argv)
 
     talk->Set("guide", 1);
 
-    tt = new tiptilt();
+    //tt = new tiptilt();
  
     int i = 0;
 

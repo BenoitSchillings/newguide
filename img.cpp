@@ -21,7 +21,7 @@ QSICamera cam;
 float g_exp = 0.001;
 int   g_filter = 1;
 int   g_bin = 2;
-int   g_count = 18;
+int   g_count = 38;
 char g_fn[256]="out";
 volatile int  killp = 0;
 
@@ -138,6 +138,7 @@ void Cam::Save()
     time_t result = time(NULL); 
     char   buf[512];
 
+    printf("save0\n");
     sprintf(buf, "%s_%ld.fit", g_fn, result);
     FILE *file = fopen(buf, "wb");
     printf("save %s\n", buf);
@@ -1031,6 +1032,8 @@ int Cam::Take()
     }
    
     talk->Set("resetguide", 1);
+    talk->Set("driz", 1);
+
     cam.get_ImageArraySize(x, y, z);
     cam.get_ImageArray(cv_image.ptr<unsigned short>(0));	
     Save(); 
